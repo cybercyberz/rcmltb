@@ -1,9 +1,19 @@
 
 An Rclone Mirror-Leech Telegram Bot to transfer to and from many clouds. Based on [mirror-leech-telegram-bot](https://github.com/anasty17/mirror-leech-telegram-bot) with rclone support added, and other features and changes from base code.
 
+This is a fork of [Sam-Max/rcmltb](https://github.com/Sam-Max/rcmltb) with additional improvements and bug fixes.
 
-**NOTE**: Base repository added recently its own rclone implementation. 
+**NOTE**: Base repository added recently its own rclone implementation.
 
+## Fork Improvements
+
+This fork includes the following enhancements over the original repository:
+
+### Bug Fixes
+- **Fixed "Peer id invalid" error for private channel batch operations**: The original bot would fail with "Peer id invalid" error when using `/mb` (mirror batch) or `/lb` (leech batch) commands with private/restricted channel links. This was caused by Pyrogram's peer cache not being populated for private channels. The fix iterates through user dialogs to find and cache the channel peer before attempting to fetch messages.
+
+### Enhanced Error Handling
+- **Improved error messages for batch commands**: When batch operations fail on private channels, the bot now provides more descriptive error messages including the actual exception, making it easier to diagnose issues.
 
 ## Features:
 
