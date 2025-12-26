@@ -1,15 +1,28 @@
-version: "3.3"
+version: "3.8"
 
 services:
   app:
-    build: .
-    container_name: rcmltb
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # No platform specified = builds for native architecture (ARM64 on M1/M2/M3)
+    container_name: rcmltbv2
     command: bash start.sh
-    # volumes:  # optional
-    #   - /usr/src/app/downloads:/usr/src/app/downloads:rw 
+    environment:
+      - TZ=UTC
+    volumes:
+      # Persist downloads (optional - uncomment if needed)
+      # - ./downloads:/usr/src/app/downloads:rw
+      # Persist rclone config
+      - ./rclone.conf:/usr/src/app/rclone.conf:ro
     ports:
-      - "80:80" # qbittorrent selection webserver
-      - "8080:8080" # rclone serve index webserver
+      - "80:80"       # qBittorrent selection webserver
+      - "8080:8080"   # rclone serve index webserver
     restart: on-failure
-      
-      
+    # Resource limits (adjust based on your M2 specs)
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 1G

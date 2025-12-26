@@ -17,6 +17,9 @@ from bot.modules.tasks_listener import TaskListener
 from os import path as ospath
 from subprocess import run as srun
 from bot.modules.mirror_leech import mirror_leech
+from bot.helper.ext_utils.batch_tracker import BatchUploadTracker
+from bot import batch_uploads, batch_upload_lock
+from uuid import uuid4
 
 
 async def leech_batch(client, message):
@@ -47,6 +50,16 @@ async def _batch(client, message, isLeech=False):
             else:
                 lines = response.text.split("\n")
                 if len(lines) > 1:
+                    # Initialize batch tracking for multiple links
+                    batch_id = str(uuid4())
+                    async with batch_upload_lock:
+                        batch_uploads[batch_id] = BatchUploadTracker(
+                            batch_id=batch_id,
+                            total_files=len(lines),
+                            batch_owner_message=message,
+                            is_leech=isLeech
+                        )
+
                     username = ""
                     password = ""
                     for link in lines:
@@ -76,7 +89,7 @@ async def _batch(client, message, isLeech=False):
                             )
                         msg = await client.get_messages(message.chat.id, msg.id)
                         msg.from_user = message.from_user
-                        create_task(mirror_leech, client, msg, isLeech=isLeech)
+                        create_task(mirror_leech, client, msg, isLeech=isLeech, batch_id=batch_id)
                         await sleep(7)
                 else:
                     _link = get_link(response.text)
@@ -93,12 +106,23 @@ async def _batch(client, message, isLeech=False):
                                 return
                             else:
                                 multi = int(response.text)
-                            await download(message, _link, multi, isLeech=isLeech)
+
+                            # Initialize batch tracking for single link multi-download
+                            batch_id = str(uuid4())
+                            async with batch_upload_lock:
+                                batch_uploads[batch_id] = BatchUploadTracker(
+                                    batch_id=batch_id,
+                                    total_files=multi,
+                                    batch_owner_message=message,
+                                    is_leech=isLeech
+                                )
+
+                            await download(message, _link, multi, isLeech=isLeech, batch_id=batch_id)
                         except ValueError:
                             await sendMessage("Range must be an integer!", message)
                         except FloodWait as fw:
                             await sleep(fw.seconds + 5)
-                            await download(message, _link, multi, isLeech=isLeech)
+                            await download(message, _link, multi, isLeech=isLeech, batch_id=batch_id)
         else:
             file_name = response.document.file_name
             if file_name.split(".")[1] in ["txt", ".txt"]:
@@ -107,6 +131,18 @@ async def _batch(client, message, isLeech=False):
                 path = await client.download_media(response, file_name="./links.txt")
                 with open(path, "r+") as f:
                     lines = f.readlines()
+
+                # Count valid links and initialize batch tracking
+                valid_links = [link for link in lines if len(link.strip()) > 1]
+                batch_id = str(uuid4())
+                async with batch_upload_lock:
+                    batch_uploads[batch_id] = BatchUploadTracker(
+                        batch_id=batch_id,
+                        total_files=len(valid_links),
+                        batch_owner_message=message,
+                        is_leech=isLeech
+                    )
+
                 for link in lines:
                     if len(link.strip()) > 1:
                         if isLeech:
@@ -123,7 +159,7 @@ async def _batch(client, message, isLeech=False):
                             )
                         msg = await client.get_messages(message.chat.id, msg.id)
                         msg.from_user = message.from_user.id
-                        create_task(mirror_leech, client, msg, isLeech=isLeech)
+                        create_task(mirror_leech, client, msg, isLeech=isLeech, batch_id=batch_id)
                         await sleep(7)
             else:
                 await sendMessage("Send a .txt file", message)
@@ -133,7 +169,7 @@ async def _batch(client, message, isLeech=False):
         await deleteMessage(question)
 
 
-async def download(message, link, multi, isLeech, value=0):
+async def download(message, link, multi, isLeech, value=0, batch_id=None):
     msg_id = int(link.split("/")[-1]) + value
     user_id = message.from_user.id
 
@@ -142,7 +178,7 @@ async def download(message, link, multi, isLeech, value=0):
     else:
         tag = message.from_user.mention
 
-    listener = TaskListener(message, tag, user_id, isLeech=isLeech)
+    listener = TaskListener(message, tag, user_id, isLeech=isLeech, batch_id=batch_id)
 
     path = f"{DOWNLOAD_DIR}{listener.uid}/"
 
@@ -184,7 +220,7 @@ async def download(message, link, multi, isLeech, value=0):
                 await sendMessage("Bot needs to join chat to download!!", message)
                 return
 
-    _multi(message, link, value, multi, isLeech)
+    _multi(message, link, value, multi, isLeech, batch_id)
 
     file = (
         msg.document
@@ -202,7 +238,7 @@ async def download(message, link, multi, isLeech, value=0):
 
 
 @new_task
-async def _multi(message, link, value, multi, isLeech):
+async def _multi(message, link, value, multi, isLeech, batch_id=None):
     if multi <= 1:
         return
     try:
@@ -213,10 +249,10 @@ async def _multi(message, link, value, multi, isLeech):
         nextmsg.from_user = message.from_user
         value += 1
         multi -= 1
-        await download(nextmsg, link, multi, isLeech, value)
+        await download(nextmsg, link, multi, isLeech, value, batch_id)
     except FloodWait as fw:
         await sleep(fw.seconds + 5)
-        await download(nextmsg, link, multi, isLeech, value)
+        await download(nextmsg, link, multi, isLeech, value, batch_id)
 
 
 bot.add_handler(

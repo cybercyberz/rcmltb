@@ -56,7 +56,7 @@ async def handle_mirror(client, message):
     await mirror_leech(client, message)
 
 
-async def mirror_leech(client, message, isLeech=False, sameDir=None):
+async def mirror_leech(client, message, isLeech=False, sameDir=None, batch_id=None):
     user_id = message.from_user.id or message.sender_chat.id
     message_id = message.id
 
@@ -190,6 +190,7 @@ async def mirror_leech(client, message, isLeech=False, sameDir=None):
         isLeech,
         screenshots,
         sameDir,
+        batch_id,
     )
 
     if file is not None:
@@ -350,7 +351,7 @@ async def handle_auto_mirror(client, message):
         tag = message.from_user.mention
     if file is not None:
         if file.mime_type != "application/x-bittorrent":
-            listener = TaskListener(message, tag, user_id)
+            listener = TaskListener(message, tag, user_id, batch_id=batch_id)
             tgdown = TelegramDownloader(
                 file, client, listener, f"{DOWNLOAD_DIR}{listener.uid}/"
             )

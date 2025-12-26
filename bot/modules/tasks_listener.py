@@ -66,6 +66,7 @@ class TaskListener:
         isLeech=False,
         screenshots=False,
         sameDir={},
+        batch_id=None,
     ):
         self.message = message
         self.tag = tag
@@ -78,6 +79,8 @@ class TaskListener:
         self.seed = seed
         self.select = select
         self.screenshots = screenshots
+        self.batch_id = batch_id
+        self.upload_start_time = None
         self.dir = f"{DOWNLOAD_DIR}{self.uid}"
         self.newDir = ""
         self.isSuperGroup = message.chat.type.name in ["SUPERGROUP", "CHANNEL"]
@@ -350,6 +353,11 @@ class TaskListener:
             if not config_dict["NO_TASKS_LOGS"]:
                 LOGGER.info(f"Leech Name: {up_name}")
 
+            # Track upload start time for batch summary
+            if self.batch_id:
+                from time import time
+                self.upload_start_time = time()
+
             tg_up = TelegramUploader(up_dir, up_name, size, self)
             async with status_dict_lock:
                 status_dict[self.uid] = TgUploadStatus(tg_up, size, gid, self)
@@ -377,6 +385,11 @@ class TaskListener:
 
                 if not config_dict["NO_TASKS_LOGS"]:
                     LOGGER.info(f"Upload Name: {up_name}")
+
+                # Track upload start time for batch summary
+                if self.batch_id:
+                    from time import time
+                    self.upload_start_time = time()
 
                 rcm = RcloneMirror(path, up_name, size, self.user_id, self)
                 await rcm.mirror()
@@ -569,6 +582,41 @@ class TaskListener:
                     await clean_target(f"{self.dir}/{name}")
                 return
 
+        # Handle batch upload tracking
+        if self.batch_id:
+            from bot import batch_uploads, batch_upload_lock
+            from os.path import splitext
+            from time import time
+
+            # Calculate upload duration
+            upload_duration = time() - self.upload_start_time if self.upload_start_time else 0
+
+            # Extract file extension
+            extension = splitext(name)[1] if '.' in name else ''
+
+            # Create file info
+            from bot.helper.ext_utils.batch_tracker import FileUploadInfo
+            file_info = FileUploadInfo(
+                name=name,
+                size=size,  # Already formatted as string in onUploadComplete
+                extension=extension,
+                upload_duration=upload_duration,
+                status="success",
+                link=link if link else ""  # Use link parameter
+            )
+
+            # Add to batch tracker
+            async with batch_upload_lock:
+                if self.batch_id in batch_uploads:
+                    tracker = batch_uploads[self.batch_id]
+                    tracker.add_completed_upload(file_info)
+
+                    # Check if batch is complete
+                    if tracker.is_complete():
+                        await tracker.send_summary()
+                        # Cleanup
+                        del batch_uploads[self.batch_id]
+
         if not config_dict["MULTI_REMOTE_UP"]:
             await clean_download(self.dir)
 
@@ -594,6 +642,28 @@ class TaskListener:
         msg = f"{self.tag} Download stopped due to: {escape(error)}"
         await sendMessage(msg, self.message)
 
+        # Handle batch download failure tracking
+        if self.batch_id:
+            from bot import batch_uploads, batch_upload_lock
+            from bot.helper.ext_utils.batch_tracker import FileUploadInfo
+
+            file_info = FileUploadInfo(
+                name=error[:50] if error else "Download failed",
+                size="0B",
+                extension="",
+                upload_duration=0,
+                status="failed"
+            )
+
+            async with batch_upload_lock:
+                if self.batch_id in batch_uploads:
+                    tracker = batch_uploads[self.batch_id]
+                    tracker.add_failed_upload(file_info)
+
+                    if tracker.is_complete():
+                        await tracker.send_summary()
+                        del batch_uploads[self.batch_id]
+
         if count == 0:
             await self.clean()
         else:
@@ -610,6 +680,28 @@ class TaskListener:
             count = len(status_dict)
 
         await sendMessage(f"{self.tag} {escape(error)}", self.message)
+
+        # Handle batch upload failure tracking
+        if self.batch_id:
+            from bot import batch_uploads, batch_upload_lock
+            from bot.helper.ext_utils.batch_tracker import FileUploadInfo
+
+            file_info = FileUploadInfo(
+                name=error[:50] if error else "Unknown",  # Truncate error message
+                size="0B",
+                extension="",
+                upload_duration=0,
+                status="failed"
+            )
+
+            async with batch_upload_lock:
+                if self.batch_id in batch_uploads:
+                    tracker = batch_uploads[self.batch_id]
+                    tracker.add_failed_upload(file_info)
+
+                    if tracker.is_complete():
+                        await tracker.send_summary()
+                        del batch_uploads[self.batch_id]
 
         if count == 0:
             await self.clean()

@@ -58,6 +58,10 @@ status_dict = {}
 status_reply_dict_lock = Lock()
 status_reply_dict = {}
 
+# Batch upload tracking
+batch_upload_lock = Lock()
+batch_uploads = {}  # {batch_id: BatchUploadTracker}
+
 BOT_TOKEN = environ.get("BOT_TOKEN", "")
 if len(BOT_TOKEN) == 0:
     LOGGER.error("BOT_TOKEN variable is missing! Exiting now")
