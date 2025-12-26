@@ -7,6 +7,29 @@ This is a fork of [Sam-Max/rcmltb](https://github.com/Sam-Max/rcmltb) with addit
 
 ---
 
+## 🍎 ARM64 Branch (Apple Silicon / Raspberry Pi / ARM servers)
+
+**This is the `arm64` branch** - optimized for ARM64 architecture (Apple M1/M2/M3, Raspberry Pi 4/5, ARM cloud servers).
+
+### Key Differences from Master Branch:
+- ✅ **Native ARM64 Dockerfile** - Built from `python:3.11-slim-bookworm` instead of x86-only base image
+- ✅ **MEGA SDK made optional** - MEGA downloads are disabled (SDK doesn't support ARM64), but all other features work
+- ✅ **Bug fix for sudo_filter** - Fixed async coroutine not being awaited in `rclone_utils.py`
+
+### Quick Start for ARM64:
+```bash
+git clone -b arm64 https://github.com/cybercyberz/rcmltb.git
+cd rcmltb
+cp sample_config.env config.env
+# Edit config.env with your settings
+docker build -t rcmltb-arm64 .
+docker run -d --name rcmltb --env-file config.env rcmltb-arm64
+```
+
+> **Note**: If you need MEGA support on ARM64, you'll need to compile the MEGA SDK from source, which is complex. All other cloud providers work perfectly.
+
+---
+
 ## 🆕 Fork Improvements & Changelog
 
 This fork includes the following enhancements over the original repository:
