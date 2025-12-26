@@ -7,6 +7,21 @@ This is a fork of [Sam-Max/rcmltb](https://github.com/Sam-Max/rcmltb) with addit
 
 ---
 
+## 🍎 ARM64 Support (Apple Silicon / Raspberry Pi / ARM Servers)
+
+**Running on ARM64?** Use the [`arm64` branch](https://github.com/cybercyberz/rcmltb/tree/arm64) for native support:
+
+```bash
+git clone -b arm64 https://github.com/cybercyberz/rcmltb.git
+```
+
+The ARM64 branch includes:
+- Native ARM64 Dockerfile (Apple M1/M2/M3, Raspberry Pi 4/5, ARM cloud servers)
+- All features work except MEGA downloads (SDK not available for ARM64)
+- Bug fixes backported from master
+
+---
+
 ## 🆕 Fork Improvements & Changelog
 
 This fork includes the following enhancements over the original repository:
