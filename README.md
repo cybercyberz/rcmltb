@@ -1,9 +1,38 @@
+# RCMLTB - Rclone Mirror Leech Telegram Bot
 
 An Rclone Mirror-Leech Telegram Bot to transfer to and from many clouds. Based on [mirror-leech-telegram-bot](https://github.com/anasty17/mirror-leech-telegram-bot) with rclone support added, and other features and changes from base code.
 
 This is a fork of [Sam-Max/rcmltb](https://github.com/Sam-Max/rcmltb) with additional improvements and bug fixes.
 
 **NOTE**: Base repository added recently its own rclone implementation.
+
+---
+
+## Table of Contents
+
+- [Fork Improvements & Changelog](#-fork-improvements--changelog)
+- [Private Channel Batch Operations](#-how-to-use-private-channel-batch-operations)
+- [Features](#features)
+- [Commands List](#commands-for-botset-through-botfather)
+- [Command Usage Guide](#command-usage-guide-with-examples)
+  - [Mirror Commands](#mirror-commands)
+  - [Leech Commands](#leech-commands)
+  - [YT-DLP Commands](#yt-dlp-commands-youtube-tiktok-instagram-etc)
+  - [Rclone Commands](#rclone-commands)
+  - [Google Drive Commands](#google-drive-commands)
+  - [Torrent Commands](#torrent-commands)
+  - [Debrid Commands](#debrid-commands)
+  - [RSS Commands](#rss-commands)
+  - [TMDB Commands](#tmdb-commands)
+  - [Settings Commands](#settings-commands)
+  - [Bot Management Commands](#bot-management-commands)
+- [Common Options Summary](#common-options-summary)
+- [Deployment Guide](#how-to-deploy)
+- [Database Setup](#generate-database)
+- [Rclone Config](#how-to-create-rclone-config-file)
+- [Google Drive Setup](#getting-google-oauth-api-credential-file-and-tokenpickle)
+- [Service Accounts](#using-service-accounts-to-avoid-user-rate-limit-for-google-drive-remotes)
+- [Authentication (.netrc)](#yt-dlp-and-aria2c-authentication-using-netrc-file)
 
 ---
 
@@ -114,18 +143,19 @@ This will mirror all files from message 100 to 150 from the private channel.
 ## Commands for bot(set through @BotFather)
 
 ```
-mirror - or /m Mirror to selected cloud 
+mirror - or /m Mirror to selected cloud
 mirror_batch - or /mb Mirror Telegram files/links in batch to cloud
-mirror_select - or /ms Select a fixed cloud/folder for mirror 
+mirror_select - or /ms Select a fixed cloud/folder for mirror
 leech - or /l Leech from cloud/link to Telegram
-leech_batch - or /lb Leech Telegram files/links in batch to Telegram 
+leech_batch - or /lb Leech Telegram files/links in batch to Telegram
 ytdl - or /y Mirror ytdlp supported link
 ytdl_leech - or /yl Leech yt-dlp supported link
+setcookies - Set cookies for yt-dlp (TikTok, Instagram, etc.)
 files - or /bf Bot configuration files
 debrid - Debrid Manager
 rcfm - Rclone File Manager
 copy - Copy from cloud to cloud
-clone - Clone gdrive link file/folder 
+clone - Clone gdrive link file/folder
 count - count file/folder fom gdrive link
 user_setting - User settings
 own_setting - Owner settings
@@ -134,7 +164,7 @@ tmdb - Search titles
 cleanup - Clean cloud trash
 cancel_all - Cancel all tasks
 storage - Cloud details
-serve - Serve cloud as web index 
+serve - Serve cloud as web index
 sync - Sync two clouds
 torrsch - Search for torrents
 status - Status message of tasks
@@ -145,6 +175,527 @@ ip - show ip
 ping - Ping bot
 restart - Restart bot
 ```
+
+---
+
+## Command Usage Guide with Examples
+
+<details>
+<summary><b>Mirror Commands</b> (click to expand)</summary>
+
+### Mirror Commands
+
+#### `/mirror` or `/m` - Mirror files to cloud storage
+
+**Basic Usage:**
+```
+/mirror https://example.com/file.zip
+```
+
+**With custom name:**
+```
+/mirror https://example.com/file.zip -n MyCustomName.zip
+```
+
+**Extract archive after download:**
+```
+/mirror https://example.com/file.rar -e
+/mirror https://example.com/file.rar -e password123
+```
+
+**Compress to zip:**
+```
+/mirror https://example.com/folder -z
+/mirror https://example.com/folder -z password123
+```
+
+**Reply to Telegram file:**
+```
+Reply to any file with: /mirror
+Reply to any file with: /mirror -n NewName.mp4
+```
+
+**Direct link with authentication:**
+```
+/mirror https://example.com/file.zip -au username -ap password
+```
+
+**Torrent with seeding:**
+```
+/mirror magnet:?xt=urn:btih:xxx -d 1.0:60
+```
+Note: `-d ratio:time` where time is in minutes
+
+**Torrent file selection:**
+```
+/mirror magnet:?xt=urn:btih:xxx -s
+```
+
+**Multi-link download (reply to first link):**
+```
+/mirror -i 5
+```
+
+**Multi-link to same folder:**
+```
+/mirror -i 5 -m FolderName
+```
+
+**Generate screenshots:**
+```
+/mirror https://example.com/video.mp4 -ss 6
+```
+
+---
+
+#### `/mirror_batch` or `/mb` - Mirror multiple files in batch
+
+**From Telegram channel (public):**
+```
+/mb
+```
+Then send: `https://t.me/channel_name/100 https://t.me/channel_name/150`
+
+**From private channel:**
+```
+/mb
+```
+Then send: `https://t.me/c/1234567890/100 https://t.me/c/1234567890/150`
+
+**From multiple URLs:**
+```
+/mb
+```
+Then send:
+```
+https://example.com/file1.zip
+https://example.com/file2.zip
+https://example.com/file3.zip
+```
+
+**From .txt file:**
+```
+/mb
+```
+Then upload a .txt file with links (one per line)
+
+---
+
+#### `/mirror_select` or `/ms` - Set default cloud remote
+
+```
+/ms
+```
+Then select your preferred cloud storage from the menu.
+
+</details>
+
+<details>
+<summary><b>Leech Commands</b> (click to expand)</summary>
+
+### Leech Commands
+
+#### `/leech` or `/l` - Download and send to Telegram
+
+**Basic Usage:**
+```
+/leech https://example.com/file.zip
+```
+
+**Reply to cloud file:**
+```
+Reply to rclone file message with: /leech
+```
+
+**With custom name:**
+```
+/leech https://example.com/file.zip -n MyFile.zip
+```
+
+**Extract and leech:**
+```
+/leech https://example.com/archive.rar -e
+```
+
+---
+
+#### `/leech_batch` or `/lb` - Leech multiple files to Telegram
+
+Same as `/mb` but sends files to Telegram instead of cloud.
+
+```
+/lb
+```
+Then send Telegram links or URLs.
+
+</details>
+
+<details>
+<summary><b>YT-DLP Commands</b> - YouTube, TikTok, Instagram, etc. (click to expand)</summary>
+
+### YT-DLP Commands (YouTube, TikTok, Instagram, etc.)
+
+#### `/ytdl` or `/y` - Download and mirror to cloud
+
+**YouTube video:**
+```
+/ytdl https://www.youtube.com/watch?v=VIDEO_ID
+```
+
+**YouTube playlist:**
+```
+/ytdl https://www.youtube.com/playlist?list=PLAYLIST_ID
+```
+
+**TikTok account (all videos):**
+```
+/ytdl https://www.tiktok.com/@username
+```
+
+**TikTok single video:**
+```
+/ytdl https://www.tiktok.com/@user/video/1234567890
+```
+
+**Instagram post/reel:**
+```
+/ytdl https://www.instagram.com/p/POST_ID/
+/ytdl https://www.instagram.com/reel/REEL_ID/
+```
+
+**With quality selection:**
+```
+/ytdl https://www.youtube.com/watch?v=VIDEO_ID -s
+```
+
+**With custom name:**
+```
+/ytdl https://www.youtube.com/watch?v=VIDEO_ID -n MyVideo
+```
+
+**With yt-dlp options:**
+```
+/ytdl link -opt playliststart:^1|playlistend:^10
+/ytdl link -opt format:bestaudio
+/ytdl link -opt writesubtitles:true|subtitleslangs:en
+```
+
+---
+
+#### `/ytdl_leech` or `/yl` - Download and send to Telegram
+
+Same as `/ytdl` but sends to Telegram instead of cloud.
+
+```
+/yl https://www.youtube.com/watch?v=VIDEO_ID
+/yl https://www.tiktok.com/@username -s
+```
+
+---
+
+#### `/setcookies` - Set cookies for authenticated downloads
+
+**For TikTok, Instagram, YouTube (age-restricted), etc.:**
+
+1. Export cookies from browser using a cookie extension
+2. Send command with cookie data:
+```
+/setcookies
+```
+Then paste your cookies in Netscape format:
+```
+.tiktok.com	TRUE	/	TRUE	0	sessionid	YOUR_SESSION_ID
+.tiktok.com	TRUE	/	TRUE	0	tt_webid	YOUR_WEBID
+```
+
+**TikTok Login (Alternative - WebApp):**
+When downloading TikTok without cookies, the bot will show a login button. Click it to login via Telegram's in-app browser.
+
+</details>
+
+<details>
+<summary><b>Rclone Commands</b> (click to expand)</summary>
+
+### Rclone Commands
+
+#### `/copy` - Copy between cloud storages
+
+```
+/copy
+```
+Then follow the interactive menu to select source and destination.
+
+---
+
+#### `/rcfm` - Rclone File Manager
+
+```
+/rcfm
+```
+Features:
+- Browse files
+- Create folders
+- Delete files/folders
+- Rename files
+- Check file sizes
+- Dedupe files
+
+---
+
+#### `/storage` - View cloud storage info
+
+```
+/storage
+```
+Shows available space on configured remotes.
+
+---
+
+#### `/cleanup` - Clean cloud trash
+
+```
+/cleanup
+```
+Then select the remote to clean.
+
+---
+
+#### `/sync` - Sync between clouds
+
+```
+/sync
+```
+Syncs files between two cloud remotes.
+
+---
+
+#### `/serve` - Serve cloud as web index
+
+```
+/serve
+```
+Creates HTTP/WebDAV index for your cloud files.
+
+</details>
+
+<details>
+<summary><b>Google Drive Commands</b> (click to expand)</summary>
+
+### Google Drive Commands
+
+#### `/clone` - Clone Google Drive links
+
+```
+/clone https://drive.google.com/file/d/FILE_ID/view
+/clone https://drive.google.com/drive/folders/FOLDER_ID
+```
+
+**Multi-clone:**
+```
+Reply to first link with: /clone -i 5
+```
+
+---
+
+#### `/count` - Count files in Google Drive
+
+```
+/count https://drive.google.com/drive/folders/FOLDER_ID
+```
+
+</details>
+
+<details>
+<summary><b>Torrent, Debrid, RSS, TMDB Commands</b> (click to expand)</summary>
+
+### Torrent Commands
+
+#### `/torrsch` - Search for torrents
+
+```
+/torrsch movie name
+/torrsch ubuntu 22.04
+```
+
+---
+
+### Debrid Commands
+
+#### `/debrid` - Real-Debrid Manager
+
+```
+/debrid
+```
+Manage Real-Debrid account and unrestrict links.
+
+---
+
+### RSS Commands
+
+#### `/rss` - RSS Feed Manager
+
+```
+/rss
+```
+Add, remove, and manage RSS feeds for auto-downloading.
+
+**Adding RSS feed:**
+```
+Title https://rss-feed-url.com c: mirror inf: 1080p exf: CAM
+```
+
+---
+
+### TMDB Commands
+
+#### `/tmdb` - Search movie/TV titles
+
+```
+/tmdb Inception
+/tmdb Breaking Bad
+```
+
+</details>
+
+<details>
+<summary><b>Settings Commands</b> (click to expand)</summary>
+
+### Settings Commands
+
+#### `/user_setting` - User settings
+
+```
+/user_setting
+```
+Configure:
+- Default upload remote
+- Thumbnail
+- Leech settings
+- And more...
+
+---
+
+#### `/own_setting` - Owner settings (Admin only)
+
+```
+/own_setting
+```
+Configure bot-wide settings.
+
+</details>
+
+<details>
+<summary><b>Bot Management Commands</b> (click to expand)</summary>
+
+### Bot Management Commands
+
+#### `/files` or `/bf` - Bot configuration files
+
+```
+/files
+```
+Upload/download bot config files (rclone.conf, token.pickle, etc.)
+
+---
+
+#### `/status` - View active tasks
+
+```
+/status
+```
+
+---
+
+#### `/stats` - Bot statistics
+
+```
+/stats
+```
+Shows CPU, RAM, disk usage, and uptime.
+
+---
+
+#### `/cancel` - Cancel a task
+
+```
+Reply to task message with: /cancel
+```
+
+---
+
+#### `/cancel_all` - Cancel all tasks
+
+```
+/cancel_all
+```
+
+---
+
+#### `/shell` - Run shell commands (Admin only)
+
+```
+/shell ls -la
+/shell df -h
+```
+
+---
+
+#### `/log` - View bot logs (Admin only)
+
+```
+/log
+```
+
+---
+
+#### `/restart` - Restart bot (Admin only)
+
+```
+/restart
+```
+
+---
+
+#### `/ping` - Check bot response
+
+```
+/ping
+```
+
+---
+
+#### `/ip` - Show server IP
+
+```
+/ip
+```
+
+</details>
+
+---
+
+## Common Options Summary
+
+| Option | Description | Example |
+|--------|-------------|---------|
+| `-n` | Custom name | `/mirror link -n NewName.zip` |
+| `-e` | Extract archive | `/mirror link -e` |
+| `-e pass` | Extract with password | `/mirror link -e mypassword` |
+| `-z` | Compress to zip | `/mirror link -z` |
+| `-z pass` | Zip with password | `/mirror link -z mypassword` |
+| `-s` | Selection mode | `/mirror torrent -s` |
+| `-d` | Seed ratio:time | `/mirror torrent -d 1.0:60` |
+| `-i N` | Multi-link (N files) | `/mirror -i 5` |
+| `-m folder` | Same directory | `/mirror -i 5 -m MyFolder` |
+| `-au` | Auth username | `/mirror link -au user` |
+| `-ap` | Auth password | `/mirror link -ap pass` |
+| `-ss` | Screenshots | `/mirror video -ss 10` |
+| `-opt` | YT-DLP options | `/ytdl link -opt format:best` |
+
+---
+
+<details>
+<summary><b>How to deploy?</b> (click to expand)</summary>
 
 ## How to deploy?
 
@@ -335,6 +886,11 @@ sudo docker-compose start
 
 ```
 
+</details>
+
+<details>
+<summary><b>Generate Database</b> (click to expand)</summary>
+
 ## Generate Database
 
 1. Go to `https://mongodb.com/` and sign-up.
@@ -345,7 +901,10 @@ sudo docker-compose start
 8. Copy your `connection string` and replace `<password>` with the password of your user, then press close.
 9. Go to `Network Access` tab, click on edit button and finally click `Allow access from anywhere` and confirm.
 
-------
+</details>
+
+<details>
+<summary><b>How to create rclone config file</b> (click to expand)</summary>
 
 ## How to create rclone config file
 
@@ -357,6 +916,11 @@ sudo docker-compose start
 - For those on android phone, you can use [RCX app](https://play.google.com/store/apps/details?id=io.github.x0b.rcx&hl=en_IN&gl=US) app to create rclone.conf file. Use "Export rclone config" option in app menu to get config file.
 - Rclone supported providers:
   > 1Fichier, Amazon Drive, Amazon S3, Backblaze B2, Box, Ceph, DigitalOcean Spaces, Dreamhost, **Dropbox**,   Enterprise File Fabric, FTP, GetSky, Google Cloud Storage, **Google Drive**, Google Photos, HDFS, HTTP, Hubic, IBM COS S3, Koofr, Mail.ru Cloud, **Mega**, Microsoft Azure Blob Storage, **Microsoft OneDrive**, **Nextcloud**, OVH, OpenDrive, Oracle Cloud Storage, ownCloud, pCloud, premiumize.me, put.io, Scaleway, Seafile, SFTP, **WebDAV**, Yandex Disk, etc. **Check all providers on official site**: [Click here](https://rclone.org/#providers).
+
+</details>
+
+<details>
+<summary><b>Getting Google OAuth API credential file and token.pickle</b> (click to expand)</summary>
 
 ## Getting Google OAuth API credential file and token.pickle
 
@@ -379,7 +943,11 @@ sudo docker-compose start
 pip3 install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 python3 generate_drive_token.py
 ```
-------
+
+</details>
+
+<details>
+<summary><b>Bittorrent Seed & qBittorrent</b> (click to expand)</summary>
 
 ## Bittorrent Seed
 
@@ -390,6 +958,10 @@ python3 generate_drive_token.py
 - Global options: `GlobalMaxRatio` and `GlobalMaxSeedingMinutes` in qbittorrent.conf, `-1` means no limit, but you can cancel manually.
   - **NOTE**: Don't change `MaxRatioAction`.
 
+</details>
+
+<details>
+<summary><b>Using Service Accounts to avoid user rate limit [For Google Drive Remotes]</b> (click to expand)</summary>
 
 ## Using Service Accounts to avoid user rate limit [For Google Drive Remotes]
 
@@ -478,7 +1050,11 @@ Then add emails from emails.txt to Google Group, after that add this Google Grou
 ```
 python3 add_to_team_drive.py -d SharedTeamDriveSrcID
 ```
-------
+
+</details>
+
+<details>
+<summary><b>Yt-dlp and Aria2c Authentication Using .netrc File</b> (click to expand)</summary>
 
 ## Yt-dlp and Aria2c Authentication Using .netrc File
 For using your premium accounts in yt-dlp or for protected Index Links, create .netrc and not netrc, this file will be hidden, so view hidden files to edit it after creation. Use following format on file: 
@@ -507,7 +1083,9 @@ machine example.workers.dev password index_password
 
 Where host is the name of extractor (eg. instagram, Twitch). Multiple accounts of different hosts can be added each separated by a new line.
 
------
+</details>
+
+---
 
 ## Donations
 
