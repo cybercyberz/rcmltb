@@ -771,6 +771,276 @@ def set_priority(id_):
     return list_torrent_contents(id_)
 
 
+@app.route("/tiktok/login/<string:user_id>")
+def tiktok_login_webapp(user_id):
+    """Serve TikTok WebApp for cookie extraction"""
+    return f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TikTok Login</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }}
+        .status {{
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            background: #2a2a2a;
+        }}
+        .button {{
+            background: #ff0050;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+        }}
+        .button:hover {{
+            background: #cc0040;
+        }}
+        iframe {{
+            width: 100%;
+            height: 600px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            margin: 20px 0;
+        }}
+        .success {{
+            background: #00aa00;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 TikTok Login</h1>
+        <div class="status">
+            <p id="status">Please log in to TikTok below to continue downloading</p>
+        </div>
+
+        <div id="step1" style="display: block;">
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>📝 Step 1: Login to TikTok</h3>
+                <p>Click the button below to open TikTok and log in with your account.</p>
+            </div>
+            <button class="button" onclick="openTikTokAndCheck()">🔗 Open TikTok & Login</button>
+        </div>
+
+        <div id="step2" style="display: none;">
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>✅ Step 2: Check if logged in</h3>
+                <p>After logging in to TikTok, return here and click the button below.</p>
+            </div>
+            <button class="button" onclick="checkAndExtractCookies()">🍪 I'm Logged In - Extract Cookies</button>
+            <button class="button" onclick="showStep1()" style="background: #666;">← Back</button>
+        </div>
+
+        <div id="step3" style="display: none;">
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3>⚙️ Manual Cookie Entry</h3>
+                <p>If automatic extraction didn't work, paste your cookies here:</p>
+                <textarea id="cookiesInput" placeholder="sessionid=...; sid_tt=...; tt_chain_token=..." style="width: 100%; height: 120px; font-family: monospace; background: #1a1a1a; color: #fff; border: 2px solid #333; padding: 10px; margin: 10px 0;"></textarea>
+            </div>
+            <button class="button" onclick="saveCookies()">✓ Save Cookies</button>
+            <button class="button" onclick="showStep2()" style="background: #666;">← Back</button>
+        </div>
+    </div>
+
+    <script>
+        function showStep1() {{
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3').style.display = 'none';
+        }}
+
+        function showStep2() {{
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'block';
+            document.getElementById('step3').style.display = 'none';
+        }}
+
+        function showStep3() {{
+            document.getElementById('step1').style.display = 'none';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('step3').style.display = 'block';
+        }}
+
+        function openTikTokAndCheck() {{
+            document.getElementById('status').innerText = '📱 Opening TikTok... Please log in there';
+            // Open TikTok in same window
+            window.open('https://www.tiktok.com/login', '_blank');
+            // Show next step
+            setTimeout(() => {{
+                showStep2();
+                document.getElementById('status').innerText = '✅ After logging in, click the button above';
+            }}, 1000);
+        }}
+
+        async function checkAndExtractCookies() {{
+            try {{
+                document.getElementById('status').innerText = '🔍 Checking for TikTok cookies...';
+
+                // Try to extract cookies from browser
+                const cookies = document.cookie;
+
+                // Check if we have TikTok cookies
+                if (cookies.includes('sessionid') || cookies.includes('sid_tt')) {{
+                    // We have cookies! Save them
+                    await saveCookiesAuto(cookies);
+                }} else {{
+                    // No cookies found - need to use iframe or manual entry
+                    document.getElementById('status').innerText = '⚠️ No cookies detected. Trying alternative method...';
+
+                    // Create hidden iframe to get cookies
+                    const iframe = document.createElement('iframe');
+                    iframe.src = 'https://www.tiktok.com';
+                    iframe.style.display = 'none';
+                    document.body.appendChild(iframe);
+
+                    // Wait for iframe to load
+                    setTimeout(async () => {{
+                        try {{
+                            // Try to get cookies from iframe
+                            const iframeCookies = iframe.contentDocument?.cookie || '';
+                            if (iframeCookies && iframeCookies.length > 50) {{
+                                await saveCookiesAuto(iframeCookies);
+                            }} else {{
+                                // Show manual entry
+                                document.getElementById('status').innerText = '⚠️ Automatic extraction failed. Please use manual entry:';
+                                showStep3();
+                            }}
+                        }} catch (e) {{
+                            document.getElementById('status').innerText = '⚠️ Cannot access cookies automatically. Please use manual entry:';
+                            showStep3();
+                        }}
+                        document.body.removeChild(iframe);
+                    }}, 2000);
+                }}
+            }} catch (error) {{
+                document.getElementById('status').innerText = '❌ Error: ' + error.message + '. Please try manual entry:';
+                showStep3();
+            }}
+        }}
+
+        async function saveCookiesAuto(cookiesStr) {{
+            return await saveCookiesCommon(cookiesStr);
+        }}
+
+        async function saveCookies() {{
+            const cookiesInput = document.getElementById('cookiesInput').value.trim();
+            if (!cookiesInput || cookiesInput.length < 50) {{
+                document.getElementById('status').innerText = '⚠️ Please enter valid cookies';
+                return;
+            }}
+            await saveCookiesCommon(cookiesInput);
+        }}
+
+        async function saveCookiesCommon(cookiesStr) {{
+            try {{
+                document.getElementById('status').innerText = '💾 Saving cookies...';
+
+                const response = await fetch('/tiktok/cookies/{user_id}', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/json',
+                    }},
+                    body: JSON.stringify({{
+                        cookies: cookiesStr,
+                        user_id: '{user_id}'
+                    }})
+                }});
+
+                const result = await response.json();
+
+                if (result.success) {{
+                    document.getElementById('status').innerHTML =
+                        '<div class="success">' +
+                        '✅ Cookies Saved Successfully!<br><br>' +
+                        'You can now close this page and retry your download in Telegram!' +
+                        '</div>';
+                }} else {{
+                    document.getElementById('status').innerText = '❌ Failed: ' + result.error;
+                }}
+            }} catch (error) {{
+                document.getElementById('status').innerText = '❌ Error: ' + error.message;
+            }}
+        }}
+    </script>
+</body>
+</html>
+"""
+
+
+@app.route("/tiktok/cookies/<string:user_id>", methods=["POST"])
+def save_tiktok_cookies(user_id):
+    """Receive and save TikTok cookies from WebApp"""
+    try:
+        data = request.get_json()
+        cookies_str = data.get('cookies', '')
+
+        if not cookies_str:
+            return {"success": False, "error": "No cookies provided"}
+
+        # Convert browser cookies to Netscape format
+        cookie_file_path = f"/usr/src/app/cookies_{user_id}.txt"
+
+        with open(cookie_file_path, 'w') as f:
+            f.write("# Netscape HTTP Cookie File\\n")
+            f.write("# This file is generated by TikTok WebApp\\n\\n")
+
+            # Parse and convert cookies
+            for cookie in cookies_str.split('; '):
+                if '=' in cookie:
+                    name, value = cookie.split('=', 1)
+                    # Netscape format: domain, flag, path, secure, expiration, name, value
+                    f.write(f".tiktok.com\\tTRUE\\t/\\tTRUE\\t0\\t{name}\\t{value}\\n")
+
+        LOGGER.info(f"Saved TikTok cookies for user {user_id}")
+
+        # Update the main cookies.txt
+        import shutil
+        shutil.copy(cookie_file_path, "/usr/src/app/cookies.txt")
+
+        return {"success": True, "message": "Cookies saved successfully"}
+    except Exception as e:
+        LOGGER.error(f"Error saving cookies: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.route("/tiktok/test-cookies", methods=["POST"])
+def test_tiktok_cookies():
+    """Test if cookies are valid"""
+    try:
+        data = request.get_json()
+        cookies_str = data.get('cookies', '')
+
+        # Basic validation - check for essential TikTok cookies
+        required_cookies = ['sessionid', 'sid_tt', 'tt_chain_token']
+        has_required = any(cookie in cookies_str for cookie in required_cookies)
+
+        return {"valid": has_required and len(cookies_str) > 100}
+    except Exception as e:
+        return {"valid": False, "error": str(e)}
+
+
 @app.route("/")
 def homepage():
     return "<h1>Rcmltb Torrent Selection/h1>"

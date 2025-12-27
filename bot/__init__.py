@@ -401,11 +401,11 @@ config_dict = {
     "YT_DLP_OPTIONS": YT_DLP_OPTIONS,
 }
 
-if QB_BASE_URL:
-    Popen(
-        f"gunicorn qbitweb.wserver:app --bind 0.0.0.0:{QB_SERVER_PORT} --worker-class gevent",
-        shell=True,
-    )
+# Always start Flask server for WebApp features (TikTok login, qBittorrent selection)
+Popen(
+    f"gunicorn qbitweb.wserver:app --bind 0.0.0.0:{QB_SERVER_PORT} --worker-class gevent",
+    shell=True,
+)
 
 srun(["qbittorrent-nox", "-d", f"--profile={getcwd()}"])
 

@@ -51,11 +51,19 @@ class YoutubeDLHelper:
         self.__ext = ""
         self.name = ""
         self.is_playlist = False
+
+        # Check for user-specific cookies first
+        user_cookies = f"cookies_{listener.user_id}.txt"
+        if ospath.exists(user_cookies):
+            cookiefile = user_cookies
+        else:
+            cookiefile = "cookies.txt"
+
         self.opts = {
             "progress_hooks": [self.__onDownloadProgress],
             "logger": MyLogger(self),
             "usenetrc": True,
-            "cookiefile": "cookies.txt",
+            "cookiefile": cookiefile,
             "allow_multiple_video_streams": True,
             "allow_multiple_audio_streams": True,
             "noprogress": True,
@@ -144,9 +152,9 @@ class YoutubeDLHelper:
                 for entry in result["entries"]:
                     if not entry:
                         continue
-                    elif "filesize_approx" in entry:
+                    if entry.get("filesize_approx"):
                         self.__size += entry["filesize_approx"]
-                    elif "filesize" in entry:
+                    elif entry.get("filesize"):
                         self.__size += entry["filesize"]
                     if not name:
                         outtmpl_ = "%(series,playlist_title,channel)s%(season_number& |)s%(season_number&S|)s%(season_number|)02d.%(ext)s"

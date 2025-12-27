@@ -36,6 +36,6 @@ tgCrypto
 urllib3
 uvloop
 xattr
-yt-dlp
+yt-dlp[default,curl-cffi]
 tmdbv3api
 

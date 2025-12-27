@@ -21,6 +21,7 @@ RUN sed -i 's/Components: main/Components: main contrib non-free non-free-firmwa
     gcc \
     git \
     gnupg \
+    libcurl4-openssl-dev \
     libmagic1 \
     mediainfo \
     p7zip-full \
