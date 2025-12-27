@@ -1086,11 +1086,6 @@ Where host is the name of extractor (eg. instagram, Twitch). Multiple accounts o
 </details>
 
 ---
-
-## Donations
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/sammax09)
-
 -----
 
 ## Bot Screenshot: 
